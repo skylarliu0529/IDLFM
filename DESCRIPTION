@@ -1,0 +1,25 @@
+Package: IDLFM
+Title: Individual Dynamic Latent Factor Model Package
+Version: 0.0.0.9000
+Authors@R: c(person(given = "Siyang",
+                      family = "Liu",
+                      role = c("aut", "cre"),
+                      email = "liusiyang.lucia@gmail.com"),
+               person(given = "Jiuchen",
+                      family = "Zhang",
+                      role = "aut",
+                      email = "jiuchez@uci.edu"))
+Author: Siyang Liu <liusiyang.lucia@gmail.com>, Jiuchen Zhang <jiuchez@uci.edu>
+Maintainer: Siyang Liu <liusiyang.lucia@gmail.com>
+Description: A personalized dynamic latent factor model (Zhang et al. (2024) <doi:10.1093/biomet/asae015>) for irregular multi-resolution time series data, to interpolate unsampled measurements from low-resolution time series.
+Depends:
+    R (>= 4.4.0)
+Imports: stats, methods, splines, SparseArray
+License: MIT + file LICENSE
+LazyData: TRUE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
