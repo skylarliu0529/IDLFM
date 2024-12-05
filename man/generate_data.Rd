@@ -4,14 +4,14 @@
 \alias{generate_data}
 \title{Generate data for simulation}
 \usage{
-generate_data(n_patients, n_var, T, idx_x, idx_y, rank, k, N)
+generate_data(n_patients, n_var, time, idx_x, idx_y, rank, k, N)
 }
 \arguments{
 \item{n_patients}{the number of patients}
 
 \item{n_var}{the number of X variables}
 
-\item{T}{maximum time}
+\item{time}{maximum time}
 
 \item{idx_x}{indices for the x data, a sparse matrix}
 
@@ -38,16 +38,16 @@ library(splines)
 library(SparseArray)
 
 I <- 3
-J <- 10
-T <- 100
+J <- 5
+time <- 1000
 R <- 3
 k <- 3
 N <- 300
-idx_x <- randomSparseArray(c(I, J, T), density=0.8)
-idx_y <- randomSparseArray(c(I, 1, T), density=0.2)
+idx_x <- randomSparseArray(c(I, J, time), density=0.8)
+idx_y <- randomSparseArray(c(I, 1, time), density=0.2)
 idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
 idx_y <- array(runif(length(idx_y), 0, 1), dim = dim(idx_y))
-generate_data(I, J, T, idx_x, idx_y, R, k, N)
+generate_data(I, J, time, idx_x, idx_y, R, k, N)
 }
 \references{
 Zhang, J., F. Xue, Q. Xu, J. Lee, and A. Qu. "Individualized dynamic latent factor model for multi-resolutional data with application to mobile health." Biometrika (2024): asae015.

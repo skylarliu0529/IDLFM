@@ -5,7 +5,7 @@
 #'
 #' @param n_patients the number of patients
 #' @param n_var the number of X variables
-#' @param T maximum time
+#' @param time maximum time
 #' @param idx_x indices for the x data, a sparse matrix
 #' @param idx_y indices for the y data, a sparse matrix
 #' @param rank rank for the random matrices
@@ -26,22 +26,22 @@
 #' library(SparseArray)
 #'
 #' I <- 3
-#' J <- 10
-#' T <- 100
+#' J <- 5
+#' time <- 1000
 #' R <- 3
 #' k <- 3
 #' N <- 300
-#' idx_x <- randomSparseArray(c(I, J, T), density=0.8)
-#' idx_y <- randomSparseArray(c(I, 1, T), density=0.2)
+#' idx_x <- randomSparseArray(c(I, J, time), density=0.8)
+#' idx_y <- randomSparseArray(c(I, 1, time), density=0.2)
 #' idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
 #' idx_y <- array(runif(length(idx_y), 0, 1), dim = dim(idx_y))
-#' generate_data(I, J, T, idx_x, idx_y, R, k, N)
-generate_data <- function(n_patients, n_var, T, idx_x, idx_y, rank, k, N) {
+#' generate_data(I, J, time, idx_x, idx_y, R, k, N)
+generate_data <- function(n_patients, n_var, time, idx_x, idx_y, rank, k, N) {
   D <- N - k
   Fx <- matrix(rnorm(n_var * rank), nrow = n_var, ncol = rank)
   Fy <- rnorm(rank)
 
-  knots <- seq(1, N - 2 * k - 1) / (N - 2 * k - 1) * T
+  knots <- seq(1, N - 2 * k - 1) / (N - 2 * k - 1) * time
   knots <- c(rep(-1, k + 1), knots, rep(T + 1, k + 1))
 
   weights <- array(rnorm(n_patients * rank * D), dim = c(n_patients, rank, D))
@@ -81,8 +81,8 @@ generate_data <- function(n_patients, n_var, T, idx_x, idx_y, rank, k, N) {
   }
   idx_x_coords <- which(idx_x != 0, arr.ind = TRUE)
   idx_y_coords <- which(idx_y != 0, arr.ind = TRUE)
-  output_x <- COO_SparseArray(c(n_patients, n_var, T), idx_x_coords, x_data)
-  output_y <- COO_SparseArray(c(n_patients, 1, T), idx_y_coords, y_data)
+  output_x <- COO_SparseArray(c(n_patients, n_var, time), idx_x_coords, x_data)
+  output_y <- COO_SparseArray(c(n_patients, 1, time), idx_y_coords, y_data)
 
   list(output_x, output_y, knots, weights, Fx, Fy)
 }
@@ -95,7 +95,7 @@ generate_data <- function(n_patients, n_var, T, idx_x, idx_y, rank, k, N) {
 #' @param Y a sparse matrix for response variables
 #' @param n_patients the number of patients
 #' @param n_var the number of X variables
-#' @param T maximum time
+#' @param time maximum time
 #' @param idx_x indices for the X data, a sparse matrix
 #' @param idx_y indices for the Y data, a sparse matrix
 #' @param rank rank for the random matrices
@@ -107,6 +107,7 @@ generate_data <- function(n_patients, n_var, T, idx_x, idx_y, rank, k, N) {
 #' @param alpha learning rate for the Adam optimizer, with the default value 0.001
 #' @param ebs convergence threshold, with the default value 0.0001
 #' @param l regularization parameter, with the default value 1
+#' @param verbose to control the console output
 #' @return A list is returned, containing the model weights, factor matrix, spline knots, predicted X and Y.
 #' @export
 #' @importFrom SparseArray COO_SparseArray extract_sparse_array nzcoo nzdata
@@ -119,27 +120,27 @@ generate_data <- function(n_patients, n_var, T, idx_x, idx_y, rank, k, N) {
 #' library(SparseArray)
 #'
 #' I <- 3
-#' J <- 10
-#' T <- 100
+#' J <- 5
+#' time <- 1000
 #' R <- 3
 #' k <- 3
 #' N <- 300
-#' idx_x <- randomSparseArray(c(I, J, T), density=0.8)
+#' idx_x <- randomSparseArray(c(I, J, time), density=0.8)
 #' idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
-#' idx_y_train <- randomSparseArray(c(I, 1, T), density=0.2)
+#' idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
 #' idx_y_train <- array(runif(length(idx_y_train), 0, 1), dim = dim(idx_y_train))
-#' idx_y_test <- randomSparseArray(c(I, 1, T), density=0.2)
+#' idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
 #' idx_y_test <- array(runif(length(idx_y_test), 0, 1), dim = dim(idx_y_test))
-#' data <- generate_data(I, J, T, idx_x, idx_y_train, R, k, N)
+#' data <- generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 #' output_x <- data[[1]]
 #' output_y <- data[[2]]
 #' knots <- data[[3]]
 #' weights <- data[[4]]
 #' Fx <- data[[5]]
 #' Fy <- data[[6]]
-#' IDLFM(X = output_x, Y = output_y, n_patients = I, n_var = J, T = T,
-#' idx_x = idx_x, idx_y = idx_y_train, rank = R, k = k, N = N)
-IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=1, lambda2=1, Niter=100, alpha=0.001, ebs=0.0001, l=1) {
+#' IDLFM(X = output_x, Y = output_y, n_patients = I, n_var = J, time = time,
+#' idx_x = idx_x, idx_y = idx_y_train, rank = R, k = k, N = N, verbose = FALSE)
+IDLFM <- function(X, Y, n_patients, n_var, time, idx_x, idx_y, rank, k, N, lambda1=1, lambda2=1, Niter=100, alpha=0.001, ebs=0.0001, l=1, verbose) {
   beta1 <- 0.9
   beta2 <- 0.999
   m_w <- 0
@@ -148,17 +149,17 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
   v_F <- 0
 
   D <- N - k - 1
-  F <- matrix(rnorm((n_var + 1) * rank), nrow = n_var + 1, ncol = rank)
+  F_all <- matrix(rnorm((n_var + 1) * rank), nrow = n_var + 1, ncol = rank)
 
   coords_Y <- nzcoo(Y)
   coords_Y[, 2] <- n_var
   coords_X <- nzcoo(X)
   coords <- rbind(coords_X, coords_Y)
   data <- c(nzdata(X), nzdata(Y))
-  xy <- COO_SparseArray(c(n_patients, n_var + 1, T), nzcoo = coords, nzdata = data, dimnames=NULL, check=TRUE)
+  xy <- COO_SparseArray(c(n_patients, n_var + 1, time), nzcoo = coords, nzdata = data, dimnames=NULL, check=TRUE)
 
-  knots <- seq(1, N - 2 * k - 2) / (N - 2 * k - 2) * T
-  knots <- c(rep(-1, k + 1), knots, rep(T + 1, k + 1))
+  knots <- seq(1, N - 2 * k - 2) / (N - 2 * k - 2) * time
+  knots <- c(rep(-1, k + 1), knots, rep(time + 1, k + 1))
 
   idx_x_coo <- COO_SparseArray(c(dim(idx_x)), nzcoo = which(idx_x != 0, arr.ind = TRUE), nzdata = idx_x[idx_x != 0])
   idx_y_coo <- COO_SparseArray(c(dim(idx_y)), nzcoo = which(idx_y != 0, arr.ind = TRUE), nzdata = idx_y[idx_y != 0])
@@ -167,12 +168,12 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
   coords_idx_x <- nzcoo(idx_x_coo)
   coords_idx <- rbind(coords_idx_x, coords_idx_y)
   data_idx <- c(nzdata(idx_x_coo), nzdata(idx_y_coo))
-  idx <- COO_SparseArray(c(n_patients, n_var + 1, T), nzcoo = coords_idx, nzdata = data_idx)
+  idx <- COO_SparseArray(c(n_patients, n_var + 1, time), nzcoo = coords_idx, nzdata = data_idx)
 
   weights <- array(rnorm(n_patients * rank * D), dim = c(n_patients, rank, D))
 
   # Define xy_pred
-  xy_pred <- function(weights, knots, F, n_patients, n_var, idx, rank, k) {
+  xy_pred <- function(weights, knots, F_all, n_patients, n_var, idx, rank, k) {
     thetas <- vector("list", n_patients)
     for (i in 1:n_patients) {
       thetas[[i]] <- vector("list", rank)
@@ -198,7 +199,7 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
         thetas_subset <- sapply(1:rank, function(r) {
           thetas[[i]][[r]](subset_data)
         })
-        tmp <- F[j, ] %*% thetas_subset
+        tmp <- F_all[j, ] %*% thetas_subset
         data <- c(data, tmp)
       }
     }
@@ -207,15 +208,17 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
     return(output)
   }
 
-  xy_hat <- xy_pred(weights, knots, F, n_patients, n_var, idx, rank, k)
+  xy_hat <- xy_pred(weights, knots, F_all, n_patients, n_var, idx, rank, k)
 
   nobs <- length(data)
   S <- sum((nzdata(xy) - nzdata(xy_hat))^2) / nobs
   S_record <- c(S)
-  print(S)
+  if(verbose){
+    print(S)
+  }
 
-  K <- matrix(0, nrow = D, ncol = T, byrow = TRUE)
-  for (t in 1:T) {
+  K <- matrix(0, nrow = D, ncol = time, byrow = TRUE)
+  for (t in 1:time) {
     xval <- t
     if (xval <= knots[k]) {
       left <- k
@@ -262,7 +265,7 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
     theta <- tensordot(weights, K, axes = c(3, 1))
     xy_hat_dense <- as.array(xy_hat)
     xy_dense <- as.array(xy)
-    grad_weights <- tensordot(2 * (xy_hat_dense - xy_dense), F, axes = c(2, 1))
+    grad_weights <- tensordot(2 * (xy_hat_dense - xy_dense), F_all, axes = c(2, 1))
     grad_weights <- tensordot(grad_weights, K, axes = c(2, 2))
     # Fused lasso for theta_i
     grad_pen <- array(0, dim = dim(weights))
@@ -299,7 +302,7 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
     grad_pen1 <- tensordot(grad_pen1[, , 1:(D - k)], jump_m[1:(D - k), ], axes = c(3, 1))
     grad_weights <- grad_weights + l * weights + lambda1 * grad_pen + lambda2 * grad_pen1
     grad_F <- tensordot(2 * (xy_hat_dense - xy_dense), theta, axes = list(c(1, 3), c(1, 3)))
-    grad_F <- grad_F + l * F
+    grad_F <- grad_F + l * F_all
 
     m_w <- beta1 * m_w + (1 - beta1) * grad_weights
     m_F <- beta1 * m_F + (1 - beta1) * grad_F
@@ -311,28 +314,35 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
     vhat_F <- v_F / (1 - beta2^itr)
 
     weights <- weights - alpha * mhat_w / (sqrt(vhat_w) + 1e-8)
-    F <- F - alpha * mhat_F / (sqrt(vhat_F) + 1e-8)
+    F_all <- F_all - alpha * mhat_F / (sqrt(vhat_F) + 1e-8)
 
-    xy_hat <- xy_pred(weights, knots, F, n_patients, n_var, idx, rank, k)
+    xy_hat <- xy_pred(weights, knots, F_all, n_patients, n_var, idx, rank, k)
     S <- sum((nzdata(xy) - nzdata(xy_hat))^2) / nobs
     t <- abs((S_record[length(S_record)] - S) / S_record[length(S_record)])
 
     if (itr > 10 && S >= max(S_record)) {
-      print('Diverge')
+      if(verbose){
+        print('Diverge')
+      }
       break
     }
     if (t < ebs) {
-      print(itr)
-      print('Converge')
+      if(verbose){
+        print(itr)
+        print('Converge')
+      }
       break
     }
 
     if (itr %% 100 == 0) {
-      print(c(itr, S))
+      if(verbose){
+        print(c(itr, S))
+      }
     }
   }
-  print('Max iteration')
-
+  if(verbose){
+    print('Max iteration')
+  }
   index_list <- list(1:n_patients, 1:n_var, 1:dim(xy_hat)[3])
   X_hat <- extract_sparse_array(xy_hat, index_list)
   index_list <- list(1:n_patients, n_var, 1:dim(xy_hat)[3])
@@ -341,5 +351,5 @@ IDLFM <- function(X, Y, n_patients, n_var, T, idx_x, idx_y, rank, k, N, lambda1=
   dim(Y_hat_array) <- c(n_patients, 1, dim(xy_hat)[3])
   Y_hat <- as(Y_hat_array, "COO_SparseArray")
 
-  return(list(weights, F, knots, X_hat, Y_hat))
+  return(list(weights, F_all, knots, X_hat, Y_hat))
 }

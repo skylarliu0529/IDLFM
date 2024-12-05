@@ -9,7 +9,7 @@ IDLFM(
   Y,
   n_patients,
   n_var,
-  T,
+  time,
   idx_x,
   idx_y,
   rank,
@@ -20,7 +20,8 @@ IDLFM(
   Niter = 100,
   alpha = 0.001,
   ebs = 1e-04,
-  l = 1
+  l = 1,
+  verbose
 )
 }
 \arguments{
@@ -32,7 +33,7 @@ IDLFM(
 
 \item{n_var}{the number of X variables}
 
-\item{T}{maximum time}
+\item{time}{maximum time}
 
 \item{idx_x}{indices for the X data, a sparse matrix}
 
@@ -55,6 +56,8 @@ IDLFM(
 \item{ebs}{convergence threshold, with the default value 0.0001}
 
 \item{l}{regularization parameter, with the default value 1}
+
+\item{verbose}{to control the console output}
 }
 \value{
 A list is returned, containing the model weights, factor matrix, spline knots, predicted X and Y.
@@ -70,26 +73,26 @@ library(splines)
 library(SparseArray)
 
 I <- 3
-J <- 10
-T <- 100
+J <- 5
+time <- 1000
 R <- 3
 k <- 3
 N <- 300
-idx_x <- randomSparseArray(c(I, J, T), density=0.8)
+idx_x <- randomSparseArray(c(I, J, time), density=0.8)
 idx_x <- array(runif(length(idx_x), 0, 1), dim = dim(idx_x))
-idx_y_train <- randomSparseArray(c(I, 1, T), density=0.2)
+idx_y_train <- randomSparseArray(c(I, 1, time), density=0.2)
 idx_y_train <- array(runif(length(idx_y_train), 0, 1), dim = dim(idx_y_train))
-idx_y_test <- randomSparseArray(c(I, 1, T), density=0.2)
+idx_y_test <- randomSparseArray(c(I, 1, time), density=0.2)
 idx_y_test <- array(runif(length(idx_y_test), 0, 1), dim = dim(idx_y_test))
-data <- generate_data(I, J, T, idx_x, idx_y_train, R, k, N)
+data <- generate_data(I, J, time, idx_x, idx_y_train, R, k, N)
 output_x <- data[[1]]
 output_y <- data[[2]]
 knots <- data[[3]]
 weights <- data[[4]]
 Fx <- data[[5]]
 Fy <- data[[6]]
-IDLFM(X = output_x, Y = output_y, n_patients = I, n_var = J, T = T,
-idx_x = idx_x, idx_y = idx_y_train, rank = R, k = k, N = N)
+IDLFM(X = output_x, Y = output_y, n_patients = I, n_var = J, time = time,
+idx_x = idx_x, idx_y = idx_y_train, rank = R, k = k, N = N, verbose = FALSE)
 }
 \references{
 Zhang, J., F. Xue, Q. Xu, J. Lee, and A. Qu. "Individualized dynamic latent factor model for multi-resolutional data with application to mobile health." Biometrika (2024): asae015.
